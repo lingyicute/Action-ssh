@@ -21,7 +21,7 @@ for dep in $EXTERNAL_DEPS; do
     fi
 done
 
-cd "$GITHUB_ACTION_PATH"
+cd "$GITHUB_WORKSPACE"
 
 cloudflared_url=https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
 echo "Downloading \`cloudflared\` from <$cloudflared_url>..."
