@@ -1,0 +1,13 @@
+name: KDE
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: chmod +x ./setup-ssh
+      - run: sudo apt update
+      - run: sudo apt install kubuntu-desktop xrdp -y
+      - run: $GITHUB_WORKSPACE/setup-ssh
+        shell: bash
