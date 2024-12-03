@@ -7,5 +7,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: chmod +x ./setup-ssh
+      - run: sudo mkdir /mnt/runner-will-upload
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
