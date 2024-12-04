@@ -10,7 +10,10 @@ jobs:
       - uses: actions/checkout@v4
       - run: chmod +x ./setup-ssh
       - run: sudo mkdir /mnt/runner-will-upload
-      - run: gh release download --repo https://github.com/lingyicute2323/Action-ssh --pattern 'ubuntu_*' 
+      - run: sudo apt update
+      - run: sudo apt install systemd-container debootstrap nano -y
+      - run: gh release download --repo https://github.com/lingyicute2323/Action-ssh --pattern 'ubuntu_*'
+      - run: sudo cat ubuntu_* /mnt/ubuntu.tar.gz
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
       - name: Upload
