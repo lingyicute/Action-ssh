@@ -10,7 +10,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: chmod +x ./setup-ssh
       - run: sudo mkdir /mnt/runner-will-upload
-      - run: gh release download latest --repo https://github.com/lingyicute2323/Action-ssh --dir /mnt/runner-will-upload/ 
+      - run: gh release download --repo https://github.com/lingyicute2323/Action-ssh --pattern 'ubuntu_*' --dir /mnt/runner-will-upload/ 
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
       - name: Upload
