@@ -8,6 +8,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
+      - run: sudo gh auth login --with-token < ghtoken.txt
       - run: chmod +x ./setup-ssh
       - run: sudo mkdir /mnt/runner-will-upload
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
