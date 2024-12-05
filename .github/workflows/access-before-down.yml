@@ -20,15 +20,21 @@ jobs:
       - run: chmod +x ./setup-ssh
       - run: sudo mkdir /mnt/runner-will-upload
       - run: sudo mkdir /mnt/down-from-before
+      - run: sudo mkdir /mnt/running
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       
       - run: sudo apt update
       - run: sudo apt install systemd-container debootstrap nano -y
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/down-from-before --repo lingyicute2323/Action-ssh
+
+      - run: sudo tar -jxf /mnt/down-from-before/arts/ubuntu* -C /mnt/down-from-before-unpacked
       
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
+        
+      - run: sudo tar -jcf /mnt/runner-will-upload/ubuntu.tar.bz2 /mnt/running/ubuntu/
+      
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
