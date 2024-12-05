@@ -1,6 +1,11 @@
-name: CI no Download
+name: CI download from before runner
 on:
   workflow_dispatch:
+    inputs:
+      artifact-id:
+        description: 'download artifact from before runner id'
+        required: true
+        default: '12153076022'
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
@@ -10,11 +15,18 @@ jobs:
       - uses: actions/checkout@v4
       - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
       - run: sudo gh auth login --with-token < ghtoken.txt
+      - run: rm ghtoken.txt
+      
       - run: chmod +x ./setup-ssh
       - run: sudo mkdir /mnt/runner-will-upload
+      - run: sudo mkdir /mnt/down-from-before
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
+      
       - run: sudo apt update
       - run: sudo apt install systemd-container debootstrap nano -y
+
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/down-from-before --repo lingyicute2323/Action-ssh
+      
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
       - name: Upload
