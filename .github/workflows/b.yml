@@ -1,0 +1,40 @@
+name: CI download from before runner (need self extract)
+on:
+  workflow_dispatch:
+    inputs:
+      artifact-id:
+        description: 'download artifact from before runner id'
+        required: true
+        default: '12153076022'
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
+      - run: sudo gh auth login --with-token < ghtoken.txt
+      - run: rm ghtoken.txt
+      
+      - run: chmod +x ./setup-ssh
+      - run: sudo mkdir /mnt/runner-will-upload
+      - run: sudo mkdir /mnt/downloaded-from-before
+      - run: sudo mkdir /mnt/running
+      - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
+      
+      - run: sudo apt update
+      - run: sudo apt install systemd-container debootstrap nano -y
+
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
+
+      - run: $GITHUB_WORKSPACE/setup-ssh
+        shell: bash
+        
+      - run: sudo tar -jcf /mnt/runner-will-upload/ubuntu.tar.bz2 /mnt/running/ubuntu/
+      
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
