@@ -10,7 +10,7 @@ env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
@@ -19,16 +19,16 @@ jobs:
       
       - run: chmod +x ./setup-ssh
       - run: sudo mkdir /mnt/runner-will-upload
-      - run: sudo mkdir /mnt/down-from-before
+      - run: sudo mkdir /mnt/downloaded-from-before
       - run: sudo mkdir /mnt/running
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       
       - run: sudo apt update
       - run: sudo apt install systemd-container debootstrap nano -y
 
-      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/down-from-before --repo lingyicute2323/Action-ssh
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
 
-      - run: sudo tar -jxf /mnt/down-from-before/arts/ubuntu* -C /mnt/down-from-before-unpacked
+      - run: sudo tar -jxf /mnt/downloaded-from-before/arts/ubuntu* -C /mnt/downloaded-from-before-unpacked
       
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
