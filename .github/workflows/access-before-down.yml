@@ -28,7 +28,7 @@ jobs:
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
 
-      - run: sudo tar -jxf /mnt/downloaded-from-before/arts/ubuntu* -C /mnt/downloaded-from-before-unpacked
+      - run: sudo tar -jxf /mnt/downloaded-from-before/arts/ubuntu* -C /mnt/running
       
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
