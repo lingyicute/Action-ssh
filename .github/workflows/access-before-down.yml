@@ -23,8 +23,8 @@ jobs:
       - run: sudo mkdir /mnt/running
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       
-      - run: sudo apt update
-      - run: sudo apt install systemd-container debootstrap nano -y
+      - run: sudo apt-get update
+      - run: sudo apt-get install systemd-container debootstrap nano -y
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
 
