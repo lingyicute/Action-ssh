@@ -23,15 +23,20 @@ jobs:
       - run: sudo mkdir /mnt/running
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       
-      - run: sudo apt update
-      - run: sudo apt install systemd-container debootstrap nano -y
+      - run: sudo apt-get update
+      - run: sudo apt-get install pbzip2 systemd-container debootstrap nano -y
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
-
+ 
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
-        
-      - run: sudo tar -jcf /mnt/runner-will-upload/ubuntu.tar.bz2 /mnt/running/ubuntu/
+
+      - run: sudo -i
+      - run: cd /mnt/running
+      - run: tar --use-compress-program=pbzip2 -cf ../runner-will-upload/ubuntu.tar.bz2 ubuntu/
+
+      - run: tree -L 2 /mnt
+      - run: exit
       
       - name: Upload
         uses: actions/upload-artifact@v4
