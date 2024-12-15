@@ -1,4 +1,4 @@
-name: CI download from before runner (need self extract)
+name: CI download from before runner (Better)
 on:
   workflow_dispatch:
     inputs:
@@ -27,6 +27,7 @@ jobs:
       - run: sudo apt-get install pv pbzip2 systemd-container debootstrap nano -y
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
+      - run: sudo tar --use-compress-program=pbzip2 -xf /mnt/downloaded-from-before/arts/ubuntu.tar.bz2 -C /mnt/running
  
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
