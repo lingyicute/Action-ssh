@@ -33,7 +33,8 @@ jobs:
 
       - run: sudo -i
       - run: cd /mnt/running
-      - run: tar --use-compress-program=pbzip2 -cf ../runner-will-upload/ubuntu.tar.bz2 ubuntu/
+      - run: tar --use-compress-program=pbzip2 -cf ubuntu.tar.bz2 ubuntu/
+      - run: cp ubuntu.tar.bz2 /mnt/runner-will-upload/
 
       - run: tree -L 2 /mnt
       - run: exit
