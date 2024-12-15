@@ -1,0 +1,12 @@
+#!/bin/sh
+
+screen -dmS tarsession sh -c "
+    cd /mnt/running || exit 1
+    tar --use-compress-program=pbzip2 -cf ubuntu.tar.bz2 ubuntu/
+"
+
+screen -S tarsession -X wait
+
+screen -S tarsession -X quit
+
+mv ubuntu.tar.bz2 /mnt/runner-will-upload/
