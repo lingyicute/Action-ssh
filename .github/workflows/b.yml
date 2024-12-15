@@ -18,6 +18,7 @@ jobs:
       - run: rm ghtoken.txt
       
       - run: chmod +x ./setup-ssh
+      - run: chmod +x ./auto-tar
       - run: sudo mkdir /mnt/runner-will-upload
       - run: sudo mkdir /mnt/downloaded-from-before
       - run: sudo mkdir /mnt/running
@@ -32,11 +33,7 @@ jobs:
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
 
-      - run: sudo -i
-      - run: cd /mnt/running
-      - run: tar --use-compress-program=pbzip2 -cf ubuntu.tar.bz2 ubuntu/
-      - run: cp ubuntu.tar.bz2 /mnt/runner-will-upload/
-
+      - run: sudo sh auto-tar
       - run: tree -L 2 /mnt
       - run: exit
       
