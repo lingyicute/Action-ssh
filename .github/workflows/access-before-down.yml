@@ -1,4 +1,4 @@
-name: CI download from before runner
+name: CI download from before runner (vm)
 on:
   workflow_dispatch:
     inputs:
@@ -10,7 +10,7 @@ env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
@@ -18,25 +18,22 @@ jobs:
       - run: rm ghtoken.txt
       
       - run: chmod +x ./setup-ssh
+      - run: chmod +x ./auto-tar
       - run: sudo mkdir /mnt/runner-will-upload
       - run: sudo mkdir /mnt/downloaded-from-before
       - run: sudo mkdir /mnt/running
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       
       - run: sudo apt-get update
-      - run: sudo apt-get install pbzip2 systemd-container debootstrap nano -y
+      - run: sudo apt-get install pv pbzip2 systemd-container debootstrap nano qemu-kvm -y
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
-
-      - run: sudo tar --use-compress-program=pbzip2 -xf /mnt/downloaded-from-before/arts/ubuntu* -C /mnt/running
-      
+ 
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
-        
-      - run: sudo tar --use-compress-program=pbzip2 -cf /mnt/runner-will-upload/ubuntu.tar.bz2 /mnt/running/ubuntu/
 
-      - run: sudo tree -L 2 /mnt
-      - run: sudo tree
+      - run: tree -L 2 /mnt
+      - run: exit
       
       - name: Upload
         uses: actions/upload-artifact@v4
