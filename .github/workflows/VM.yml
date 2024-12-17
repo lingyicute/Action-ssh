@@ -31,11 +31,11 @@ jobs:
         shell: bash
 
       - run: |
-         screen -dmS tarsession bash -c "cd /mnt/running && tar --use-compress-program=pbzip2 -cf fedorakde.tar.bz2 fedorakde.qcow2"
+         screen -dmS tarsession bash -c "cd /mnt/running && tar --use-compress-program=pbzip2 -cf fedora.tar.bz2 fedora.qcow2"
          while screen -ls | grep -q tarsession; do
             sleep 5
          done
-      - run: mv /mnt/running/fedorakde.tar.bz2 /mnt/runner-will-upload
+      - run: mv /mnt/running/fedora.tar.bz2 /mnt/runner-will-upload
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
