@@ -18,16 +18,14 @@ jobs:
       - run: rm ghtoken.txt
       
       - run: chmod +x ./setup-ssh
-      - run: chmod +x ./auto-tar
       - run: sudo mkdir /mnt/runner-will-upload
-      - run: sudo mkdir /mnt/downloaded-from-before
       - run: sudo mkdir /mnt/running
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       
       - run: sudo apt-get update
       - run: sudo apt-get install pv pbzip2 nano qemu-kvm -y
 
-      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/downloaded-from-before --repo lingyicute2323/Action-ssh
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
  
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
