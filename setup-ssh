@@ -34,27 +34,16 @@ if grep -q . authorized_keys; then
     echo "Configured SSH key(s) for user: $GITHUB_ACTOR"
 else
     echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "Setting SSH password..."
-
-    #
-    # This command could be "beautifully" lazy like the commented line below,
-    # but for some reason on GitHub Actions specifically (and nowhere else I
-    # could find) it logs the following warnings:
-    #
-    #     tr: write error: Broken pipe
-    #     tr: write error
-    #     base64: write error: Broken pipe
-    #     base64: write error
-    #
-    # Even though it still succeeds and behaves properly, I'd rather not have
-    # those warnings show up, so I use `head` twice, getting 16 bytes off
-    # `/dev/urandom`, Base64-encoding it (which should give us 25 characters),
-    # and we drop all the nonalphanumeric ones and trim it to 16 chars.
-    #
-    password=$(head -c 16 /dev/urandom | base64 | tr -cd '[:alnum:]' | head -c 16)
-    # password=$(base64 < /dev/urandom | tr -cd '[:alnum:]' | head -c16)
-
-    (echo "$password"; echo "$password") | sudo passwd "$USER"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
+    echo "No SSH key found for user: $GITHUB_ACTOR"
 fi
 
 # `-q` is to make it quiet, `-N ''` is for empty passphrase
