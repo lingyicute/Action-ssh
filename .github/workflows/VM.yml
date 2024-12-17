@@ -5,7 +5,7 @@ on:
       artifact-id:
         description: 'download artifact from before runner id'
         required: true
-        default: '12153076022'
+        default: '12354801720'
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
@@ -32,9 +32,8 @@ jobs:
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
 
-      - run: tree -L 2 /mnt
-      - run: exit
-      
+      - run: screen -S tarsession -X stuff "sudo -i\ncd /mnt/running\ntar --use-compress-program=pbzip2 -cf fedorakde.tar.bz2 fedorakde.qcow2"
+      - run: mv /mnt/running/fedorakde.tar.bz2 /mnt/runner-will-upload
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
