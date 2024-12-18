@@ -1,0 +1,14 @@
+#!/bin/sh
+
+echo "当前工作目录: $(pwd)" || exit 1
+
+
+(
+    cd /mnt/running/arts || exit 1
+    echo "解压工作目录: $(pwd)" || exit 1
+    tar --use-compress-program=pbzip2 -xf fedora.tar.bz2 -C /mnt/running || exit 1
+)
+
+echo "解缩完成，仍在原工作目录: $(pwd)" || exit 1
+
+rm -rf /mnt/running/arts || exit 1
