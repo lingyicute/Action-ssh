@@ -12,7 +12,7 @@ jobs:
       - run: sudo mkdir /mnt/runner-will-upload
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       - run: sudo apt update
-      - run: sudo apt install nano -y
+      - run: sudo apt install qemu-kvm nano -y
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
       - name: Upload
