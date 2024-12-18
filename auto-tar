@@ -1,10 +1,14 @@
 #!/bin/sh
 
-screen -dmS tarsession
-screen -S tarsession -X stuff "sudo -i\ncd /mnt/running\ntar --use-compress-program=pbzip2 -cf ubuntu.tar.bz2 ubuntu/"
+echo "当前工作目录: $(pwd)" || exit 1
 
-screen -S tarsession -X wait
 
-screen -S tarsession -X quit
+(
+    cd /mnt/running || exit 1
+    echo "tar 工作目录: $(pwd)" || exit 1
+    tar --use-compress-program=pbzip2 -cf fedora.tar.bz2 fedora.qcow2 || exit 1
+)
 
-mv ubuntu.tar.bz2 /mnt/runner-will-upload/
+echo "压缩完成，仍在原工作目录: $(pwd)" || exit 1
+
+mv /mnt/running/fedora.tar.bz2 /mnt/runner-will-upload || exit 1
