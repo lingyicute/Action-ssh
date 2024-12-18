@@ -96,7 +96,7 @@ public_key=$(cut -d' ' -f1,2 < ssh_host_rsa_key.pub)
     echo '    '
     echo 'Run the following command to connect:'
     echo '    '
-    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 3389:localhost:3389 runner@action-sshd-cloudflared"
+    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 5901:localhost:5901 runner@action-sshd-cloudflared"
 
     #
     # Unlike Upterm that runs a custom SSH server to accept passwords in the
@@ -125,10 +125,10 @@ public_key=$(cut -d' ' -f1,2 < ssh_host_rsa_key.pub)
     echo "    echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts"
     echo '    '
     echo '    # Connect using `cloudflared` as a transport (SSH is end-to-end encrpted over this tunnel)'
-    echo "    ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 3389:localhost:3389 runner@action-sshd-cloudflared"
+    echo "    ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 5901:localhost:5901 runner@action-sshd-cloudflared"
     echo '    '
     echo "    # Alternative if you don't want to verify the host key"
-    echo "    ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=accept-new -L 3389:localhost:3389 runner@action-sshd-cloudflared"
+    echo "    ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=accept-new -L 5901:localhost:5901 runner@action-sshd-cloudflared"
     echo '    '
     echo '    '
     echo '    '
