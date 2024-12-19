@@ -1,9 +1,9 @@
-name: CI download from before runner (vm)
+name: download from before runner (vm)
 on:
   workflow_dispatch:
     inputs:
       LINK:
-        description: 'download artifact from before runner id'
+        description: 'the before runner id'
         required: true
         default: '12354801720'
 env:
@@ -19,7 +19,7 @@ jobs:
       
       - run: chmod +x ./setup-ssh
       - run: chmod +x ./auto-tar
-      - run: chmod +x ./auto-unpack
+      - run: chmod +x ./auto-patch-environment
       - run: sudo mkdir /mnt/running
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
