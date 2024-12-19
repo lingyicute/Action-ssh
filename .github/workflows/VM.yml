@@ -22,6 +22,8 @@ jobs:
       - run: chmod +x ./auto-tar
       - run: chmod +x ./auto-patch-environment
       - run: sudo mkdir /mnt/running
+      - run: sudo mv ./kvm /mnt/running/
+      - run: sudo chmod +x ./kvm
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
 
