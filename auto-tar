@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 echo "当前工作目录: $(pwd)" || exit 1
 
 
