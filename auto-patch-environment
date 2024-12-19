@@ -3,8 +3,8 @@ set -e
 
 echo "当前工作目录: $(pwd)"
 
-mkdir -p /mnt/runner-will-upload
-rm -f /mnt/DATALOSS_WARNING_README.txt
+mkdir /mnt/runner-will-upload
+rm /mnt/DATALOSS_WARNING_README.txt
 apt-get update
 apt-get install -y pbzip2 nano qemu-kvm
 
@@ -13,7 +13,5 @@ apt-get install -y pbzip2 nano qemu-kvm
     echo "解压工作目录: $(pwd)" || exit 1
     tar --use-compress-program=pbzip2 -xf fedora.tar.bz2 -C /mnt/running || exit 1
 )
-
-echo "解缩完成，仍在原工作目录: $(pwd)" || exit 1
 
 rm -rf /mnt/running/arts || exit 1
