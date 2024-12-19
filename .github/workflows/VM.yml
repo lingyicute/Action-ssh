@@ -16,6 +16,7 @@ jobs:
       - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
       - run: sudo gh auth login --with-token < ghtoken.txt
       - run: rm ghtoken.txt
+      - run: sudo echo "alias c='cd /mnt'" >> ~/.bashrc
       
       - run: chmod +x ./setup-ssh
       - run: chmod +x ./auto-tar
@@ -26,7 +27,7 @@ jobs:
 
       - run: sudo sh ./auto-patch-environment
 
-      - run: alias si='sudo -i'
+      - run: alias s='sudo -i'
       
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
