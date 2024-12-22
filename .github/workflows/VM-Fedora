@@ -1,0 +1,42 @@
+name: download from before runner (vm-fedora)
+on:
+  workflow_dispatch:
+    inputs:
+      LINK:
+        description: 'the before runner id'
+        required: true
+        default: '12354801720'
+env:
+  GH_TOKEN: ${{ secrets.GH_TOKEN }}
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
+      - run: sudo gh auth login --with-token < ghtoken.txt
+      - run: rm ghtoken.txt
+      
+      - run: chmod +x ./setup-ssh
+      - run: chmod +x ./auto-tar
+      - run: chmod +x ./auto-patch-environment
+      - run: sudo mkdir /mnt/running
+      - run: sudo mv ./kvm-fedora /mnt/running/kvm
+      - run: sudo chmod +x /mnt/running/kvm
+
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
+
+      - run: sudo sh ./auto-patch-environment
+
+      - run: alias s='sudo -i'
+      
+      - run: $GITHUB_WORKSPACE/setup-ssh
+        shell: bash
+
+      - run: sudo sh ./auto-tar
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
