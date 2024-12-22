@@ -1,4 +1,4 @@
-name: download from before runner (vm)
+name: download from before runner (vm-win11)
 on:
   workflow_dispatch:
     inputs:
