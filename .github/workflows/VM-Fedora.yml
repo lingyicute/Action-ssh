@@ -27,8 +27,6 @@ jobs:
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
 
       - run: sudo sh ./auto-patch-environment
-
-      - run: alias s='sudo -i'
       
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
