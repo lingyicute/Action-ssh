@@ -30,7 +30,9 @@ jobs:
       
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
-
+        
+      - run: sudo apt-get install guestfs-tools -y
+      
       - run: sudo sh ./auto-tar
 
       - name: Upload
