@@ -5,9 +5,7 @@ echo "当前工作目录: $(pwd)" || exit 1
 (
     cd /mnt/running || exit 1
     echo "tar 工作目录: $(pwd)" || exit 1
-    mv fedora.qcow2 fedoraorig.qcow2 || exit 1
-    qemu-img convert -f qcow2 -O qcow2 fedoraorig.qcow2 fedora.qcow2 || exit 1
-    rm fedoraorig.qcow2 || exit 1
+    virt-sparsify --inplace fedora.qcow2
     tar --use-compress-program=pbzip2 -cf fedora.tar.bz2 fedora.qcow2 || exit 1
 )
 
