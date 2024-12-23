@@ -27,12 +27,12 @@ jobs:
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
 
       - run: sudo sh ./auto-patch-environment
-      
+
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
-        
-      - run: sudo apt-get install guestfs-tools -y
-      
+
+      - run: sudo apt-get install guestfs-tools -y --no-install-recommends
+
       - run: sudo sh ./auto-tar
 
       - name: Upload
