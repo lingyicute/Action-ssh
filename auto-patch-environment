@@ -9,9 +9,9 @@ apt-get update
 apt-get install -y pbzip2 nano qemu-kvm
 
 (
-    cd /mnt/running/arts || exit 1
+    cd /mnt/current-running/arts || exit 1
     echo "解压工作目录: $(pwd)" || exit 1
-    tar --use-compress-program=pbzip2 -xf fedora.tar.bz2 -C /mnt/running || exit 1
+    tar --use-compress-program=pbzip2 -xf fedora.tar.bz2 -C /mnt/current-running || exit 1
 )
 
-rm -rf /mnt/running/arts || exit 1
+rm -rf /mnt/current-running/arts || exit 1

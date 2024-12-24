@@ -1,4 +1,4 @@
-name: download from before runner (vm-fedora)
+name: download from before runner (vm-fedora-encrypt)
 on:
   workflow_dispatch:
     inputs:

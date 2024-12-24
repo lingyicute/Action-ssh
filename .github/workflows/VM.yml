@@ -20,11 +20,11 @@ jobs:
       - run: chmod +x ./setup-ssh
       - run: chmod +x ./auto-tar
       - run: chmod +x ./auto-patch-environment
-      - run: sudo mkdir /mnt/running
-      - run: sudo mv ./kvm /mnt/running/
-      - run: sudo chmod +x /mnt/running/kvm
+      - run: sudo mkdir /mnt/current-running
+      - run: sudo mv ./kvm /mnt/current-running/
+      - run: sudo chmod +x /mnt/current-running/kvm
 
-      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/running --repo lingyicute2323/Action-ssh
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/current-running --repo lingyicute2323/Action-ssh
 
       - run: sudo sh ./auto-patch-environment
 
