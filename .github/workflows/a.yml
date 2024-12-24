@@ -12,8 +12,6 @@ jobs:
       - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
       - run: sudo gh auth login --with-token < ghtoken.txt
       - run: rm ghtoken.txt
-      - run: sudo echo "alias c='cd /mnt'" >> ~/.bashrc
-      - run: alias s='sudo -i'
       - run: sudo mkdir /mnt/runner-will-upload
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       - run: sudo apt update
