@@ -3,8 +3,9 @@ set -e
 
 (
     cd /mnt/current-running || exit 1
+    apt install guestfs-tools -y --no-install-recommends || exit 1
     echo "tar 工作目录: $(pwd)" || exit 1
-    virt-sparsify --inplace fedora.qcow2
+    virt-sparsify --inplace fedora.qcow2 || exit 1
     echo "压缩开始" || exit 1
     tar --use-compress-program=pbzip2 -cf fedora.tar.bz2 fedora.qcow2 || exit 1
 )
