@@ -24,7 +24,6 @@ done
 cd "$GITHUB_WORKSPACE"
 
 cloudflared_url=https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-echo "Downloading \`cloudflared\` from <$cloudflared_url>..."
 curl --location --silent --output cloudflared "$cloudflared_url"
 chmod +x cloudflared
 
@@ -46,7 +45,6 @@ else
     echo "No SSH key found for user: $GITHUB_ACTOR"
 fi
 
-# `-q` is to make it quiet, `-N ''` is for empty passphrase
 echo 'Creating SSH server key...'
 ssh-keygen -q -f ssh_host_rsa_key -N ''
 echo "$fingerprint"
