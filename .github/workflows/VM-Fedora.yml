@@ -19,14 +19,14 @@ jobs:
       
       - run: chmod +x ./setup-ssh
       - run: chmod +x ./auto-tar
-      - run: chmod +x ./auto-patch-environment
+      - run: chmod +x ./auto-patch-environment-and-untar
       - run: sudo mkdir /mnt/current-running
       - run: sudo mv ./kvm-fedora /mnt/current-running/kvm
       - run: sudo chmod +x /mnt/current-running/kvm
 
-      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/current-running --repo lingyicute2323/Action-ssh
+      - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/current-running --repo scevwvrvebv/Action-ssh
 
-      - run: sudo sh ./auto-patch-environment
+      - run: sudo sh ./auto-patch-environment-and-untar
 
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
