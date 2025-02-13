@@ -1,4 +1,4 @@
-name: v2ray
+name: v2ray deprecated
 on:
   workflow_dispatch:
 env:

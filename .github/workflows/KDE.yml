@@ -3,11 +3,18 @@ on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - run: sudo mkdir /mnt/runner-will-upload
+      - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       - run: chmod +x ./setup-ssh
       - run: sudo apt update
       - run: sudo apt install kubuntu-desktop xrdp -y
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
