@@ -26,6 +26,29 @@ jobs:
 
       - run: sudo gh run download ${{ github.event.inputs.LINK }} --dir /mnt/current-running --repo scevwvrvebv/Action-ssh
 
+      - name: Handle Fedora tarball
+        shell: bash
+        run: |
+            set -euo pipefail
+            ARTIFACTS_DIR="/mnt/current-running/arts"
+    
+            shopt -s nullglob
+            matched_files=("$ARTIFACTS_DIR"/fedora-*.tar.bz2)
+            shopt -u nullglob
+            file_count=${#matched_files[@]}
+
+                if [ $file_count -eq 1 ]; then
+                  echo "Found single Fedora tarball: ${matched_files[0]}"
+                  mv -v "${matched_files[0]}" "$ARTIFACTS_DIR/fedora.tar.bz2"
+                  echo "Renamed ${matched_files[0]} to fedora.tar.bz2"
+                elif [ $file_count -gt 1 ]; then
+                  echo "::error::Multiple Fedora tarballs detected:"
+                  printf '  %s\n' "${matched_files[@]}"
+                  exit 1
+                else
+                  echo "No Fedora tarballs found"
+                fi
+
       - run: sudo sh ./auto-patch-environment-and-untar
 
       - run: $GITHUB_WORKSPACE/setup-ssh
