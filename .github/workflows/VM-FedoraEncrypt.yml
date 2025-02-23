@@ -5,7 +5,7 @@ on:
       LINK:
         description: 'the before runner id'
         required: true
-        default: '12354801720'
+        default: '13303124913'
 env:
   GH_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
@@ -39,7 +39,7 @@ jobs:
 
                 if [ $file_count -eq 1 ]; then
                   echo "Found single Fedora tarball: ${matched_files[0]}"
-                  mv -v "${matched_files[0]}" "$ARTIFACTS_DIR/fedora.tar.bz2"
+                  sudo mv -v "${matched_files[0]}" "$ARTIFACTS_DIR/fedora.tar.bz2"
                   echo "Renamed ${matched_files[0]} to fedora.tar.bz2"
                 elif [ $file_count -gt 1 ]; then
                   echo "::error::Multiple Fedora tarballs detected:"
