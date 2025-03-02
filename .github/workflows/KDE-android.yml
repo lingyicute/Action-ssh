@@ -1,0 +1,29 @@
+name: KDE Android Studio
+on:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: sudo mkdir /mnt/runner-will-upload
+      - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
+      - run: chmod +x ./setup-ssh
+      - run: sudo apt update
+      - run: sudo apt install kubuntu-desktop xrdp -y
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: 17
+
+      - run: wget -P /home/runner/Downloads https://redirector.gvt1.com/edgedl/android/studio/install/2024.2.2.13/android-studio-2024.2.2.13-windows.exe
+        shell: bash
+      
+      - run: $GITHUB_WORKSPACE/setup-ssh
+        shell: bash
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
