@@ -10,7 +10,7 @@ jobs:
       - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       - run: chmod +x ./setup-ssh
       - run: sudo apt update
-      - run: sudo apt install --no-install-recommends plasma-desktop sddm -y
+      - run: sudo apt install --no-install-recommends plasma-desktop dolphin konsole sddm -y
       - run: sudo apt install xrdp -y
 
       - uses: actions/setup-java@v4
