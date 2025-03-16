@@ -1,19 +1,13 @@
 name: bare ssh
 on:
   workflow_dispatch:
-env:
-  GH_TOKEN: ${{ secrets.GH_TOKEN }}
 jobs:
   build:
-    runs-on: ubuntu-24.04
+    runs-on: depot-ubuntu-24.04-32
     steps:
       - uses: actions/checkout@v4
       - run: chmod +x ./setup-ssh
-      - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
-      - run: sudo gh auth login --with-token < ghtoken.txt
-      - run: rm ghtoken.txt
       - run: sudo mkdir /mnt/runner-will-upload
-      - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
       - run: sudo apt update
       - run: sudo apt install qemu-kvm nano pbzip2 -y
       - run: $GITHUB_WORKSPACE/setup-ssh
