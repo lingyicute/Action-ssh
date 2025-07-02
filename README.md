@@ -54,7 +54,7 @@
     > [!TIP]
     > 推荐使用我的 [Cloudflared 连接小工具](https://github.com/lingyicute/Cloudflared-Helper)。
     >
-    - 使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:port`。密码为您在第一步中设置的 `rdpw`。
+    - 使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:port`。用户名为 `runneradmin` (Depot 环境为 `Administrator`)，密码为您在第一步中设置的 `rdpw`。
 
 ### 连接到 RDP 环境 (Linux Desktop)
 
