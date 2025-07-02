@@ -41,7 +41,7 @@
 
 1.  **设置 RDP 密码**
     - 进入您 Fork 的仓库的 `Settings` -> `Secrets and variables` -> `Actions` 页面。
-    - 创建一个新的仓库秘密 (repository secret)，名称为 `RDPW`，值为您想要设置的 RDP 连接密码。
+    - 创建一个新的仓库秘密 (repository secret)，名称为 `rdpw`，值为您想要设置的 RDP 连接密码。
 
 2.  **运行相关的 Workflow**
     - 在您仓库的 "Actions" 页面，从左侧选择一个您想要运行的 Workflow (例如 `Windows RDP Github-runner x64`)。
@@ -54,7 +54,7 @@
     > [!TIP]
     > 推荐使用我的 [Cloudflared 连接小工具](https://github.com/lingyicute/Cloudflared-Helper)。
     >
-    - 使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:port`。密码为您在第一步中设置的 `RDPW`。
+    - 使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:port`。密码为您在第一步中设置的 `rdpw`。
 
 ### 连接到 RDP 环境 (Linux Desktop)
 
@@ -67,9 +67,10 @@
 
 3.  **获取连接命令并连接**
     - Workflow 启动后，点击进入该 Workflow 的运行日志页面。
-    - 等待一段时间，日志中会输出一个含端口转发参数的 `ssh` 命令。
-    - 在您自己的电脑上，安装 `cloudflared` 客户端。
-    - 复制并粘贴日志中生成的完整命令到您的终端，并使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接。
+    - 等待一段时间，日志中会输出用于普通 SSH 连接和 RDP 连接的两条 `ssh` 命令。
+    - 在您自己的电脑上，安装 `cloudflared` 客户端（如果尚未安装）。
+    - 找到并复制**为 RDP 准备的**那条 `ssh` 命令（即包含 `-L 21118:localhost:3389` 参数的命令），并粘贴到您的终端运行以建立隧道。
+    - 隧道建立后，使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:21118`。在登录界面中，输入用户名 `runner`，密码字段留空，即可进入桌面。
 
 ## 可用的环境 (Workflows)
 
