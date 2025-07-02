@@ -1,5 +1,0 @@
-#!/bin/sh
-
-echo "当前工作目录: $(pwd)" || exit 1
-
-qemu-system-x86_64 -enable-kvm -smp 4 -drive file=fedora.qcow2,format=qcow2,if=virtio -m 11264 -vnc :1 -cpu host,kvm=on -monitor stdio -netdev user,id=fedoranet0,hostfwd=tcp::5902-:3389 -device virtio-net-pci,netdev=fedoranet0 || exit 1

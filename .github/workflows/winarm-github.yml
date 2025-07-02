@@ -1,0 +1,39 @@
+name: Windows RDP Github-runner ARM
+
+on: [push, workflow_dispatch]
+
+jobs:
+  setup-rdp:
+    runs-on: windows-11-arm
+    timeout-minutes: 9600
+    steps:
+    - name: Enable RDP Service
+      shell: pwsh
+      run: |
+        # 启用远程桌面服务
+        Set-Service -Name TermService -StartupType Automatic -Status Running
+
+    - name: Configure RDP Access
+      shell: pwsh
+      env:
+        RDP_USER: runneradmin
+        RDP_PASSWORD: ${{ secrets.rdpw }}
+      run: |
+        # 设置用户密码
+        $securePass = ConvertTo-SecureString $env:RDP_PASSWORD -AsPlainText -Force
+        Set-LocalUser -Name runneradmin -Password $securePass
+        Enable-LocalUser -Name runneradmin
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member runneradmin
+
+        # 启用RDP服务
+        Set-Service -Name TermService -StartupType Automatic -Status Running
+
+    - name: Cloudflare
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile .\cloudflared-windows-amd64.exe -UseBasicParsing
+
+    - name: Cloudflare run
+      shell: pwsh
+      run: |
+        .\cloudflared-windows-amd64.exe tunnel --url tcp://localhost:3389
