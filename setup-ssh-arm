@@ -92,9 +92,13 @@ public_key=$(cut -d' ' -f1,2 < ssh_host_rsa_key.pub)
     echo '    '
     echo '    '
     echo '    '
-    echo 'Run the following command to connect:'
+    echo 'Run the following command to connect SSH:'
     echo '    '
-    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 5901:localhost:5901 -L 5938:localhost:5902 runner@action-sshd-cloudflared"
+    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' runner@action-sshd-cloudflared"
+    echo '    '
+    echo 'Run the following command to connect if you want to log in via RDP:'
+    echo '    '
+    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 21118:localhost:3389 runner@action-sshd-cloudflared"
 
     #
     # Unlike Upterm that runs a custom SSH server to accept passwords in the
@@ -105,32 +109,6 @@ public_key=$(cut -d' ' -f1,2 < ssh_host_rsa_key.pub)
         echo '    '
         echo "    # Password: $password"
     fi
-
-    #
-    # You might notice we use `action-sshd-cloudflared` as a SSH host to connect.
-    # This is abritrary and we could put anything here, because of the
-    # `ProxyCommand` option later, the host is ignored and we directly go through
-    # the tunnel exposed by `cloudflared`. But for the `ssh` command to be valid,
-    # we still need to give it a host.
-    #
-    echo '    '
-    echo "What the one-liner does:"
-    echo '    '
-    echo '    # Remove old SSH server public key for `action-sshd-cloudflared`'
-    echo "    ssh-keygen -R action-sshd-cloudflared"
-    echo '    '
-    echo '    # Trust the public key for this session'
-    echo "    echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts"
-    echo '    '
-    echo '    # Connect using `cloudflared` as a transport (SSH is end-to-end encrpted over this tunnel)'
-    echo "    ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 5901:localhost:5901 -L 5938:localhost:5902 runner@action-sshd-cloudflared"
-    echo '    '
-    echo "    # Alternative if you don't want to verify the host key"
-    echo "    ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=accept-new -L 5901:localhost:5901 -L 5938:localhost:5902 runner@action-sshd-cloudflared"
-    echo '    '
-    echo '    '
-    echo '    '
-    echo '    '
 ) | notify_func
 
 tmux wait-for channel
