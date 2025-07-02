@@ -1,6 +1,6 @@
 name: Windows RDP Github-runner x64
 
-on: [push, workflow_dispatch]
+on: workflow_dispatch
 
 jobs:
   setup-rdp:
