@@ -1,6 +1,6 @@
 name: Windows RDP depot-runner x64
 
-on: [push, workflow_dispatch]
+on: workflow_dispatch
 
 jobs:
   setup-rdp:
@@ -70,11 +70,6 @@ jobs:
         Set-ItemProperty -Path $AdvRegPath -Name "IconsOnly" -Value 0 -Force
         # 显示复选框
         Set-ItemProperty -Path $AdvRegPath -Name "AutoCheckSelect" -Value 1 -Force
-        
-    - name: Upload a Build Artifact
-      uses: actions/upload-artifact@v4.6.2
-      with:
-        path: D:\lyiup\*
 
         # 刷新桌面并触发图标重新排列
         rundll32.exe user32.dll,UpdatePerUserSystemParameters
