@@ -1,0 +1,120 @@
+name: Windows RDP depot-runner x64
+
+on: [push, workflow_dispatch]
+
+jobs:
+  setup-rdp:
+    runs-on: depot-windows-2022-32
+    timeout-minutes: 9600
+    steps:
+    - name: Enable RDP Service
+      shell: pwsh
+      run: |
+        # 启用远程桌面服务
+        Set-Service -Name TermService -StartupType Automatic -Status Running
+
+    - name: Configure RDP Access
+      shell: pwsh
+      env:
+        RDP_USER: Administrator
+        RDP_PASSWORD: ${{ secrets.rdpw }}
+      run: |
+        # 设置用户密码
+        $securePass = ConvertTo-SecureString $env:RDP_PASSWORD -AsPlainText -Force
+        Set-LocalUser -Name Administrator -Password $securePass
+        Enable-LocalUser -Name Administrator
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member Administrator
+
+        # 启用RDP服务
+        Set-Service -Name TermService -StartupType Automatic -Status Running
+
+    - name: Customize Desktop and Explorer
+      shell: pwsh
+      run: |
+        # 1. 清理桌面
+        # 清空管理员桌面
+        if (Test-Path "C:\Users\Administrator\Desktop") {
+            Get-ChildItem -Path "C:\Users\Administrator\Desktop" -Force | Remove-Item -Recurse -Force
+        }
+        
+        # 清理公共桌面
+        Remove-Item -Path "C:\Users\Public\Desktop\Epic Games Launcher.lnk" -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "C:\Users\Public\Desktop\R 4.4.2.lnk" -Force -ErrorAction SilentlyContinue
+        Remove-Item -Path "C:\Users\Public\Desktop\Unity Hub.lnk" -Force -ErrorAction SilentlyContinue
+
+        # 清空 installer 用户桌面
+        if (Test-Path "C:\Users\installer\Desktop") {
+            Get-ChildItem -Path "C:\Users\installer\Desktop" | Remove-Item -Recurse -Force
+        }
+        
+        # 清空 Default 用户桌面
+        if (Test-Path "C:\Users\Default\Desktop") {
+            Get-ChildItem -Path "C:\Users\Default\Desktop" | Remove-Item -Recurse -Force
+        }
+        
+        # 清理当前用户的桌面图标缓存
+        $RegPath = "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop"
+        if (Test-Path $RegPath) {
+            Remove-Item -Path $RegPath -Recurse -Force
+        }
+
+        # 2. 文件资源管理器设置
+        $AdvRegPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced"
+        # 显示文件扩展名
+        Set-ItemProperty -Path $AdvRegPath -Name "HideFileExt" -Value 0 -Force
+        # 显示隐藏文件
+        Set-ItemProperty -Path $AdvRegPath -Name "Hidden" -Value 1 -Force
+        # 不显示受保护的操作系统文件
+        Set-ItemProperty -Path $AdvRegPath -Name "ShowSuperHidden" -Value 0 -Force
+        # 显示缩略图
+        Set-ItemProperty -Path $AdvRegPath -Name "IconsOnly" -Value 0 -Force
+        # 显示复选框
+        Set-ItemProperty -Path $AdvRegPath -Name "AutoCheckSelect" -Value 1 -Force
+        
+    - name: Upload a Build Artifact
+      uses: actions/upload-artifact@v4.6.2
+      with:
+        path: D:\lyiup\*
+
+        # 刷新桌面并触发图标重新排列
+        rundll32.exe user32.dll,UpdatePerUserSystemParameters
+
+    - name: Set Desktop Wallpaper
+      shell: pwsh
+      run: |
+        $ImageUrl = "https://raw.githubusercontent.com/lingyicute/Files/main/warmer-wind.jpg"
+        $ImagePath = "C:\wallpaper.jpg"
+        Invoke-WebRequest -Uri $ImageUrl -OutFile $ImagePath -UseBasicParsing
+        
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value $ImagePath
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value 2
+        Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value 0
+        
+        rundll32.exe user32.dll,UpdatePerUserSystemParameters
+
+    - name: Set Google Chrome as Default Browser
+      shell: pwsh
+      run: |
+        $xmlContent = @'
+        <?xml version="1.0" encoding="UTF-8"?>
+        <DefaultAssociations>
+          <Association Identifier=".htm" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+          <Association Identifier=".html" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+          <Association Identifier="http" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+          <Association Identifier="https" ProgId="ChromeHTML" ApplicationName="Google Chrome" />
+        </DefaultAssociations>
+        '@
+        $xmlPath = "C:\default-browser.xml"
+        $xmlContent | Out-File -FilePath $xmlPath -Encoding utf8
+        Dism.exe /Online /Import-DefaultAppAssociations:$xmlPath
+        Remove-Item -Path $xmlPath -Force
+
+    - name: Cloudflare
+      shell: pwsh
+      run: |
+        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile .\cloudflared-windows-amd64.exe -UseBasicParsing
+
+    - name: Cloudflare run
+      shell: pwsh
+      run: |
+        .\cloudflared-windows-amd64.exe tunnel --url tcp://localhost:3389

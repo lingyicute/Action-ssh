@@ -1,4 +1,4 @@
-name: bare ssh
+name: bare SSH Github-runner
 on:
   workflow_dispatch:
 env:
@@ -12,10 +12,8 @@ jobs:
       - run: echo ${{ secrets.GH_TOKEN }} > ghtoken.txt
       - run: sudo gh auth login --with-token < ghtoken.txt
       - run: rm ghtoken.txt
-      - run: sudo echo "alias c='cd /mnt'" >> ~/.bashrc
-      - run: alias s='sudo -i'
       - run: sudo mkdir /mnt/runner-will-upload
-      - run: sudo rm /mnt/DATALOSS_WARNING_README.txt
+      - run: sudo rm -f /mnt/DATALOSS_WARNING_README.txt
       - run: sudo apt update
       - run: sudo apt install qemu-kvm nano pbzip2 -y
       - run: $GITHUB_WORKSPACE/setup-ssh
@@ -25,3 +23,4 @@ jobs:
         with:
           name: arts
           path: /mnt/runner-will-upload/*
+          

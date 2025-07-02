@@ -1,13 +1,22 @@
-name: KDE
+name: KDE Github-runner
 on:
   workflow_dispatch:
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - run: chmod +x ./setup-ssh
+      - run: sudo mkdir /mnt/runner-will-upload
+      - run: sudo rm -f /mnt/DATALOSS_WARNING_README.txt
+      - run: sudo chmod 777 /dev/kvm
       - run: sudo apt update
       - run: sudo apt install kubuntu-desktop xrdp -y
       - run: $GITHUB_WORKSPACE/setup-ssh
         shell: bash
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
+          
