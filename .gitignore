@@ -1,0 +1,7 @@
+/cloudflared
+/authorized_keys
+/sshd_config
+/sshd.pid
+/ssh_host_ed25519_key
+/ssh_host_ed25519_key.pub
+/cloudflared.log

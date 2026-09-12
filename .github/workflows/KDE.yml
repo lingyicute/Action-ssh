@@ -1,5 +1,9 @@
 name: KDE Github-runner
 
+# 这些 workflow 只需要读代码，显式收窄 GITHUB_TOKEN 权限。
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
 

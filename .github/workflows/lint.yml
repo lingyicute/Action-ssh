@@ -1,5 +1,9 @@
 name: lint
 
+# 这些 workflow 只需要读代码，显式收窄 GITHUB_TOKEN 权限。
+permissions:
+  contents: read
+
 on:
   push:
     branches: [main]
@@ -13,7 +17,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: shellcheck
-        run: shellcheck --shell=bash --severity=style setup-ssh
+        run: shellcheck --shell=bash --severity=style setup-ssh force-command.sh
 
   actionlint:
     runs-on: ubuntu-latest
@@ -22,7 +26,9 @@ jobs:
       - uses: actions/checkout@v7
       - name: actionlint
         run: |
-          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          # 固定版本，并且这里是「下载脚本再执行」，等价于对上游 main 分支的信任；
+          # 至少把版本钉死，升级时是个显式的动作。
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash) 1.7.7
           ./actionlint -color
 
   yaml-format:
@@ -43,5 +49,5 @@ jobs:
               echo "::error file=$f::文件末尾缺少换行"
               fail=1
             fi
-          done < <(git ls-files '*.yml' '*.md' 'setup-ssh*' '*.template')
+          done < <(git ls-files '*.yml' '*.md' '*.sh' 'setup-ssh*' '*.template')
           exit $fail
