@@ -11,6 +11,6 @@ jobs:
   build:
     uses: ./.github/workflows/reusable-linux-ssh.yml
     with:
-      runs-on: ubuntu-24.04
+      runs-on: ubuntu-26.04
       desktop: kde
       enable-kvm: true
