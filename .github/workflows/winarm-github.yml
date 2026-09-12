@@ -8,7 +8,6 @@ jobs:
     with:
       runs-on: windows-11-vs2026-arm
       runner-user: runneradmin
-
       cloudflared-asset: cloudflared-windows-amd64.exe
       timeout-minutes: 360
     secrets: inherit

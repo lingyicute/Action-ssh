@@ -55,7 +55,7 @@
     - 在您仓库的 "Actions" 页面，从左侧选择一个您想要运行的 Workflow (例如 `Windows RDP Github-runner x64`)。
     - 点击 "Run workflow" 下拉菜单并启动。
 
-3.  **获取连接地址并连接**
+3.  **获取连接地址并准备**
     - Workflow 启动后，点击进入该 Workflow 的运行日志页面。
     - 等待一段时间，日志中会输出一个 Cloudflare 隧道的地址，看起来像 `https://....trycloudflare.com`。
     - 在您自己的电脑上，安装 `cloudflared` 客户端。
@@ -63,6 +63,7 @@
 > [!tip]
 > 推荐使用我的 [Cloudflared 连接小工具](https://github.com/lingyicute/Cloudflared-Helper)。
 
+4.  **建立连接**
     - 先用 `cloudflared` 把隧道映射到本地端口（把日志里的地址替换进去）：
       ```bash
       cloudflared access tcp --hostname https://....trycloudflare.com --url localhost:13389
