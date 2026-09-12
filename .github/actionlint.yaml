@@ -1,0 +1,4 @@
+# actionlint 不认识第三方 runner 标签，需要在这里声明白名单。
+self-hosted-runner:
+  labels:
+    - depot-windows-2022-32

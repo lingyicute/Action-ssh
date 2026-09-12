@@ -1,0 +1,65 @@
+name: reusable-windows-rdp
+
+# winx64-github.yml 与 winarm-github.yml 原本只差 name 和 runs-on 两行，
+# 收敛到这里。
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      runner-user:
+        required: true
+        type: string
+      cloudflared-asset:
+        description: "cloudflared Windows 二进制文件名"
+        required: false
+        type: string
+        default: cloudflared-windows-amd64.exe
+      timeout-minutes:
+        required: false
+        type: number
+        default: 360
+
+jobs:
+  setup-rdp:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - name: Configure RDP Access
+        shell: pwsh
+        env:
+          RDP_USER: ${{ inputs.runner-user }}
+          RDP_PASSWORD: ${{ secrets.rdpw }}
+        run: |
+          if (-not $env:RDP_PASSWORD) {
+            Write-Error "未配置 rdpw secret，无法设置 RDP 密码。"
+            exit 1
+          }
+          # 设置用户密码
+          $securePass = ConvertTo-SecureString $env:RDP_PASSWORD -AsPlainText -Force
+          Set-LocalUser -Name $env:RDP_USER -Password $securePass
+          Enable-LocalUser -Name $env:RDP_USER
+          Add-LocalGroupMember -Group "Remote Desktop Users" -Member $env:RDP_USER
+
+          # 启用远程桌面服务（原文件里这一步重复了两遍，合并到此处）
+          Set-Service -Name TermService -StartupType Automatic -Status Running
+
+      - name: Download cloudflared
+        shell: pwsh
+        env:
+          CF_ASSET: ${{ inputs.cloudflared-asset }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/$env:CF_ASSET" -OutFile ".\$env:CF_ASSET" -UseBasicParsing
+          # 校验一下确实能跑：ARM runner 上跑的是 amd64 二进制（见下方说明），
+          # 一旦模拟层出问题，这里就能给出明确报错，而不是等到隧道那步才莫名其妙地挂掉。
+          & ".\$env:CF_ASSET" --version
+          if ($LASTEXITCODE -ne 0) { throw "cloudflared 无法执行（exit $LASTEXITCODE）" }
+
+      - name: Cloudflare run
+        shell: pwsh
+        env:
+          CF_ASSET: ${{ inputs.cloudflared-asset }}
+        run: |
+          & ".\$env:CF_ASSET" tunnel --url tcp://localhost:3389
