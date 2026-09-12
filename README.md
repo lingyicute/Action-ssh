@@ -37,6 +37,14 @@
     - 在您自己的电脑上，安装 `cloudflared` 客户端。
     - 复制并粘贴日志中生成的完整命令到您的终端并运行即可连接。
 
+4.  **结束会话**
+    - 登录进去后你会直接落在一个 tmux 会话里，Workflow 会一直保持运行状态。
+    - 想正常收尾（而不是去 Actions 页面手动 Cancel），在这个 tmux 会话里执行：
+      ```bash
+      tmux wait-for -S channel
+      ```
+    - 也可以随时 `Ctrl-b d` 脱离会话让它在后台继续跑，之后用 `tmux attach` 回来。
+
 ### 连接到 RDP 环境 (Windows)
 
 1.  **设置 RDP 密码**
@@ -51,10 +59,15 @@
     - Workflow 启动后，点击进入该 Workflow 的运行日志页面。
     - 等待一段时间，日志中会输出一个 Cloudflare 隧道的地址，看起来像 `https://....trycloudflare.com`。
     - 在您自己的电脑上，安装 `cloudflared` 客户端。
-    > [!TIP]
-    > 推荐使用我的 [Cloudflared 连接小工具](https://github.com/lingyicute/Cloudflared-Helper)。
-    >
-    - 使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:port`。用户名为 `runneradmin` (Depot 环境为 `Administrator`)，密码为您在第一步中设置的 `rdpw`。
+
+> [!tip]
+> 推荐使用我的 [Cloudflared 连接小工具](https://github.com/lingyicute/Cloudflared-Helper)。
+
+    - 先用 `cloudflared` 把隧道映射到本地端口（把日志里的地址替换进去）：
+      ```bash
+      cloudflared access tcp --hostname https://....trycloudflare.com --url localhost:13389
+      ```
+    - 使用 RDP 客户端 (如 Windows 自带的 "远程桌面连接") 连接到 `localhost:13389`。用户名为 `runneradmin` (Depot 环境为 `Administrator`)，密码为您在第一步中设置的 `rdpw`。
 
 ### 连接到 RDP 环境 (Linux Desktop)
 
@@ -80,4 +93,27 @@
 *   `winx64-depot.yml`: 在 Depot Ci Windows (x64) 环境下提供 **RDP**。
 *   `winarm-github.yml` / `bare-ssh-arm.yml`: 针对 ARM 架构的相应版本。
 
-您可以根据您的需求选择不同的 workflow，也可以自行修改 workflow 文件以定制您需要的环境。 
+上面这些文件都只是「入口」，真正的步骤分别收敛在两个可复用工作流里：
+
+*   `reusable-linux-ssh.yml`: 所有 Linux 环境共用的前置步骤。
+*   `reusable-windows-rdp.yml`: GitHub 托管 Windows 环境共用的 RDP + 隧道步骤。
+
+所以要定制环境，一般是改这两个可复用工作流，或者照着 `bare-ssh.yml` 的样子
+新加一个几行的入口文件。
+
+## 常见问题排查
+
+**日志里没有出现连接命令，或者直接报错退出**
+
+最常见的原因是**你的 GitHub 账户里没有 SSH 公钥**。请到
+[github.com/settings/keys](https://github.com/settings/keys) 添加一把公钥后重试。
+脚本现在会在启动前检查这一点并立即失败，不会再让你对着一个连不上的 runner 干等。
+
+**`ERROR: cloudflared 下载失败` / `无法执行`**
+
+网络抖动或上游版本变动。`setup-ssh` 里的 `CLOUDFLARED_VERSION` 是锁定的，
+需要升级时改那一行即可。
+
+**连上之后想结束**
+
+在 tmux 会话里执行 `tmux wait-for -S channel`（见上文「结束会话」）。

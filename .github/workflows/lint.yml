@@ -1,0 +1,47 @@
+name: lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: shellcheck
+        run: shellcheck --shell=bash --severity=style setup-ssh
+
+  actionlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: actionlint
+        run: |
+          bash <(curl -fsSL https://raw.githubusercontent.com/rhysd/actionlint/main/scripts/download-actionlint.bash)
+          ./actionlint -color
+
+  yaml-format:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - name: 检查行尾空白与文件末尾换行
+        run: |
+          fail=0
+          while IFS= read -r f; do
+            if grep -nP '[ \t]+$' "$f" >/dev/null 2>&1; then
+              echo "::error file=$f::存在行尾空白"
+              grep -nP '[ \t]+$' "$f" | sed 's/^/    /'
+              fail=1
+            fi
+            if [ -s "$f" ] && [ "$(tail -c1 "$f" | od -An -c | tr -d ' ')" != '\n' ]; then
+              echo "::error file=$f::文件末尾缺少换行"
+              fail=1
+            fi
+          done < <(git ls-files '*.yml' '*.md' 'setup-ssh*' '*.template')
+          exit $fail

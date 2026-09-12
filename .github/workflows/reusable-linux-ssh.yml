@@ -1,0 +1,101 @@
+name: reusable-linux-ssh
+
+# 可复用工作流：把三个 Linux workflow 里重复的前置步骤收敛到这一处。
+# 每个调用方文件只保留 name / runs-on 等差异，新增一种环境只要加几行。
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        required: true
+        type: string
+      desktop:
+        description: "none 或 kde"
+        required: false
+        type: string
+        default: none
+      enable-kvm:
+        required: false
+        type: boolean
+        default: false
+      timeout-minutes:
+        required: false
+        type: number
+        default: 360
+
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    timeout-minutes: ${{ inputs.timeout-minutes }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install runtime dependencies
+        env:
+          # 避免 kubuntu-desktop 之类的大包被 debconf 提问卡住
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get update
+          # openssh-server / tmux / gettext-base 是 setup-ssh 的硬依赖，
+          # GitHub 托管镜像里并没有预装，必须显式安装。
+          # qemu-kvm 和 pbzip2 已移除：需要它们的 VM*.yml 早就删掉了，
+          # 装着只是每次白等。
+          sudo apt-get install -y --no-install-recommends \
+            openssh-server tmux gettext-base
+          sudo apt-get clean
+
+      - name: Install desktop environment
+        if: inputs.desktop == 'kde'
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo apt-get install -y kubuntu-desktop xrdp
+          sudo apt-get clean
+
+      - name: Configure xrdp to launch Plasma
+        if: inputs.desktop == 'kde'
+        run: |
+          # /etc/xrdp/startwm.sh 最终会 exec /etc/X11/Xsession，
+          # 而 Xsession 在 allow-user-xsession 开启时（Ubuntu 默认开启）
+          # 会优先执行 ~/.xsession。不显式指定的话，登录进去不一定是 Plasma。
+          runner_home="$(getent passwd runner | cut -d: -f6)"
+          echo 'startplasma-x11' | sudo tee "$runner_home/.xsession" >/dev/null
+          sudo chmod 755 "$runner_home/.xsession"
+          sudo chown runner:runner "$runner_home/.xsession"
+          if ! grep -qx 'allow-user-xsession' /etc/X11/Xsession.options 2>/dev/null; then
+            echo 'allow-user-xsession' | sudo tee -a /etc/X11/Xsession.options >/dev/null
+          fi
+
+      - name: Enable KVM
+        if: inputs.enable-kvm
+        run: |
+          # /dev/kvm 不是每种 runner 都有，没有就跳过而不是让整个 job 挂掉
+          if [ ! -e /dev/kvm ]; then
+            echo "::warning::/dev/kvm 不存在，该 runner 不支持嵌套虚拟化，跳过。"
+            exit 0
+          fi
+          # 用 udev 规则而不是 `chmod 777`：
+          # 字符设备的执行位没有意义，0777 是错的写法，规范值是 0666。
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules >/dev/null
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Prepare upload dir
+        run: |
+          sudo mkdir -p /mnt/runner-will-upload
+          sudo rm -f /mnt/DATALOSS_WARNING_README.txt
+
+      - name: Start SSH environment
+        shell: bash
+        run: |
+          bash "$GITHUB_WORKSPACE/setup-ssh"
+
+      - name: Upload
+        # 即使上一步失败也上传，便于排查
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: arts
+          path: /mnt/runner-will-upload/*
+          if-no-files-found: warn
+          retention-days: 7

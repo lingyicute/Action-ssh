@@ -7,25 +7,23 @@ jobs:
     runs-on: depot-windows-2022-32
     timeout-minutes: 9600
     steps:
-    - name: Enable RDP Service
-      shell: pwsh
-      run: |
-        # 启用远程桌面服务
-        Set-Service -Name TermService -StartupType Automatic -Status Running
-
     - name: Configure RDP Access
       shell: pwsh
       env:
         RDP_USER: Administrator
         RDP_PASSWORD: ${{ secrets.rdpw }}
       run: |
+        if (-not $env:RDP_PASSWORD) {
+          Write-Error "未配置 rdpw secret，无法设置 RDP 密码。"
+          exit 1
+        }
         # 设置用户密码
         $securePass = ConvertTo-SecureString $env:RDP_PASSWORD -AsPlainText -Force
-        Set-LocalUser -Name Administrator -Password $securePass
-        Enable-LocalUser -Name Administrator
-        Add-LocalGroupMember -Group "Remote Desktop Users" -Member Administrator
+        Set-LocalUser -Name $env:RDP_USER -Password $securePass
+        Enable-LocalUser -Name $env:RDP_USER
+        Add-LocalGroupMember -Group "Remote Desktop Users" -Member $env:RDP_USER
 
-        # 启用RDP服务
+        # 启用远程桌面服务（原文件里这一步重复了两遍，合并到此处）
         Set-Service -Name TermService -StartupType Automatic -Status Running
 
     - name: Customize Desktop and Explorer
@@ -36,7 +34,7 @@ jobs:
         if (Test-Path "C:\Users\Administrator\Desktop") {
             Get-ChildItem -Path "C:\Users\Administrator\Desktop" -Force | Remove-Item -Recurse -Force
         }
-        
+
         # 清理公共桌面
         Remove-Item -Path "C:\Users\Public\Desktop\Epic Games Launcher.lnk" -Force -ErrorAction SilentlyContinue
         Remove-Item -Path "C:\Users\Public\Desktop\R 4.4.2.lnk" -Force -ErrorAction SilentlyContinue
@@ -46,12 +44,12 @@ jobs:
         if (Test-Path "C:\Users\installer\Desktop") {
             Get-ChildItem -Path "C:\Users\installer\Desktop" | Remove-Item -Recurse -Force
         }
-        
+
         # 清空 Default 用户桌面
         if (Test-Path "C:\Users\Default\Desktop") {
             Get-ChildItem -Path "C:\Users\Default\Desktop" | Remove-Item -Recurse -Force
         }
-        
+
         # 清理当前用户的桌面图标缓存
         $RegPath = "HKCU:\Software\Microsoft\Windows\Shell\Bags\1\Desktop"
         if (Test-Path $RegPath) {
@@ -80,11 +78,11 @@ jobs:
         $ImageUrl = "https://raw.githubusercontent.com/lingyicute/Files/main/warmer-wind.jpg"
         $ImagePath = "C:\wallpaper.jpg"
         Invoke-WebRequest -Uri $ImageUrl -OutFile $ImagePath -UseBasicParsing
-        
+
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name Wallpaper -Value $ImagePath
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name WallpaperStyle -Value 2
         Set-ItemProperty -Path "HKCU:\Control Panel\Desktop" -Name TileWallpaper -Value 0
-        
+
         rundll32.exe user32.dll,UpdatePerUserSystemParameters
 
     - name: Set Google Chrome as Default Browser
@@ -104,12 +102,16 @@ jobs:
         Dism.exe /Online /Import-DefaultAppAssociations:$xmlPath
         Remove-Item -Path $xmlPath -Force
 
-    - name: Cloudflare
+    - name: Download cloudflared
       shell: pwsh
       run: |
-        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile .\cloudflared-windows-amd64.exe -UseBasicParsing
+        $ErrorActionPreference = 'Stop'
+        Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile ".\cloudflared-windows-amd64.exe" -UseBasicParsing
+        # 校验确实能跑，失败时给出明确报错
+        & ".\cloudflared-windows-amd64.exe" --version
+        if ($LASTEXITCODE -ne 0) { throw "cloudflared 无法执行（exit $LASTEXITCODE）" }
 
     - name: Cloudflare run
       shell: pwsh
       run: |
-        .\cloudflared-windows-amd64.exe tunnel --url tcp://localhost:3389
+        & ".\cloudflared-windows-amd64.exe" tunnel --url tcp://localhost:3389

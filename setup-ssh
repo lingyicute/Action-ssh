@@ -1,123 +1,173 @@
-#!/bin/bash -e
+#!/bin/bash
+#
+# 在 GitHub Actions runner 上拉起一个可 SSH 登录的临时环境，
+# 并通过 Cloudflare Tunnel 暴露到公网。
+#
+# 架构（amd64 / arm64）通过 uname -m 自动识别，
+# 因此不再需要单独维护 setup-ssh-arm。
+#
+set -Eeuo pipefail
 
-notify_func() {
-    cat
-}
+fail() { echo "ERROR: $*" >&2; exit 1; }
 
-if [ ! -z "$IX_USERNAME" ] && [ ! -z "$IX_PASSWORD" ]; then
-    notify_func() {
-        # `f:1=<-` will set the value of the `f:1` form field with data from `stdin`
-        tee >(curl -u "$IX_USERNAME:$IX_PASSWORD" -F 'f:1=<-' http://ix.io > /tmp/ix-io.txt)
-    }
-fi
+cd "${GITHUB_WORKSPACE:?GITHUB_WORKSPACE 未设置}"
 
-# Check non-coreutils dependencies
-EXTERNAL_DEPS="curl jq ssh-keygen"
-
-for dep in $EXTERNAL_DEPS; do
-    if ! command -v "$dep" > /dev/null 2>&1; then
-       echo "Command $dep not installed on the system!" >&2
-       exit 1
-    fi
+# ---------------------------------------------------------------------------
+# 0. 依赖检查
+#    GitHub 托管的 ubuntu 镜像只预装 openssh-client，
+#    既不预装 openssh-server 也不预装 tmux，必须由 workflow 显式安装。
+#    这里再兜一层，给出明确报错而不是让人对着一堆 command not found 猜。
+# ---------------------------------------------------------------------------
+missing=()
+for dep in curl jq ssh-keygen tmux; do
+    command -v "$dep" >/dev/null 2>&1 || missing+=("$dep")
 done
-
-cd "$GITHUB_WORKSPACE"
-
-cloudflared_url=https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
-curl --location --silent --output cloudflared "$cloudflared_url"
-chmod +x cloudflared
-
-curl -s "https://api.github.com/users/$GITHUB_ACTOR/keys" | jq -r '.[].key' > authorized_keys
-
-if grep -q . authorized_keys; then
-    echo "Configured SSH key(s) for user: $GITHUB_ACTOR"
-else
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
-    echo "No SSH key found for user: $GITHUB_ACTOR"
+# sshd 位于 /usr/sbin，不在非 root 用户的 PATH 里，必须用绝对路径检查
+[ -x /usr/sbin/sshd ] || missing+=("openssh-server")
+if [ "${#missing[@]}" -gt 0 ]; then
+    fail "缺少依赖: ${missing[*]}
+  请在 workflow 中先执行：
+    sudo apt-get update
+    sudo apt-get install -y --no-install-recommends openssh-server tmux gettext-base"
 fi
 
-echo 'Creating SSH server key...'
-ssh-keygen -q -f ssh_host_rsa_key -N ''
-echo "$fingerprint"
+# 退出时清理所有后台进程，避免留下孤儿
+pids=()
+cleanup() {
+    local pid
+    for pid in "${pids[@]:-}"; do
+        [ -n "${pid:-}" ] || continue
+        kill "$pid" 2>/dev/null || true
+    done
+}
+trap cleanup EXIT INT TERM
 
+# ---------------------------------------------------------------------------
+# 1. cloudflared
+#    - 按架构选择二进制
+#    - 锁定版本：releases/latest 会随上游发版突然变行为，且无法复现问题
+#    - --fail：HTTP 错误时真的失败（否则错误页会被写进二进制，
+#             chmod +x 之后报一个完全看不出原因的错）
+#    - --retry：应对 runner 的网络抖动
+# ---------------------------------------------------------------------------
+case "$(uname -m)" in
+    x86_64)        cf_arch=amd64 ;;
+    aarch64|arm64) cf_arch=arm64 ;;
+    *) fail "不支持的架构: $(uname -m)" ;;
+esac
+CLOUDFLARED_VERSION="${CLOUDFLARED_VERSION:-2026.9.1}"
+cloudflared_url="https://github.com/cloudflare/cloudflared/releases/download/${CLOUDFLARED_VERSION}/cloudflared-linux-${cf_arch}"
+
+echo "Downloading cloudflared ${CLOUDFLARED_VERSION} (${cf_arch})..."
+curl -fLSs --retry 5 --retry-delay 3 --connect-timeout 15 -o cloudflared "$cloudflared_url" \
+    || fail "cloudflared 下载失败: ${cloudflared_url}"
+chmod +x cloudflared
+./cloudflared --version >/dev/null \
+    || fail "cloudflared 下载后无法执行，请确认版本 ${CLOUDFLARED_VERSION} 是否提供 linux-${cf_arch}"
+
+# ---------------------------------------------------------------------------
+# 2. authorized_keys
+#    取不到公钥就立刻失败。
+#    否则脚本会照常启动 sshd 并打印连接命令，
+#    然后 job 干等满 6 小时而谁都连不上。
+# ---------------------------------------------------------------------------
+api_url="https://api.github.com/users/${GITHUB_ACTOR}/keys"
+api_body=$(curl -fsS --retry 3 -H 'Accept: application/vnd.github+json' "$api_url") \
+    || fail "无法获取 ${api_url}（限流或网络问题）"
+
+printf '%s' "$api_body" | jq -e 'type == "array"' >/dev/null \
+    || fail "GitHub API 返回的不是数组，可能是限流响应：$(printf '%s' "$api_body" | head -c 200)"
+
+printf '%s' "$api_body" | jq -r '.[].key' > authorized_keys
+key_count=$(grep -c . authorized_keys || true)
+[ "$key_count" -gt 0 ] || fail "用户 ${GITHUB_ACTOR} 的 GitHub 账户里没有任何 SSH 公钥。
+  请先到 https://github.com/settings/keys 添加公钥，否则无法登录。"
+chmod 600 authorized_keys
+echo "Configured ${key_count} SSH key(s) for user: ${GITHUB_ACTOR}"
+
+# ---------------------------------------------------------------------------
+# 3. host key —— ed25519，比 RSA 更快也更现代
+# ---------------------------------------------------------------------------
+echo 'Creating SSH host key...'
+ssh-keygen -q -t ed25519 -f ssh_host_ed25519_key -N ''
+echo "Host key fingerprint: $(ssh-keygen -lf ssh_host_ed25519_key.pub)"
+
+# ---------------------------------------------------------------------------
+# 4. sshd 配置 —— 用 envsubst 渲染模板。
+#    原来的 sed "s,\$PWD,$PWD," 在路径含 , 或 & 时会直接报错。
+# ---------------------------------------------------------------------------
 echo 'Creating SSH server config...'
-sed "s,\$PWD,$PWD,;s,\$USER,$USER," sshd_config.template > sshd_config
+command -v envsubst >/dev/null 2>&1 \
+    || fail "缺少 envsubst，请在 workflow 中安装 gettext-base"
+# 单引号是故意的：传给 envsubst 的是「待替换变量名列表」，不是 shell 变量
+# shellcheck disable=SC2016
+PWD="$PWD" USER="${USER:-runner}" envsubst '$PWD,$USER' \
+    < sshd_config.template > sshd_config
 
+# ---------------------------------------------------------------------------
+# 5. 启动 sshd —— 后台进程的退出码 set -e 不会检查，
+#    所以必须主动探测端口，否则会打印一个根本连不上的连接命令。
+# ---------------------------------------------------------------------------
 echo 'Starting SSH server...'
-/usr/sbin/sshd -f sshd_config -D &
-sshd_pid=$!
+sudo mkdir -p /run/sshd   # sshd 的特权分离目录
+sudo /usr/sbin/sshd -f "$PWD/sshd_config" -D &
+pids+=($!)
+
+listening=no
+for _ in $(seq 1 20); do
+    if (exec 3<>"/dev/tcp/127.0.0.1/2222") 2>/dev/null; then listening=yes; break; fi
+    sleep 0.5
+done
+[ "$listening" = yes ] || fail "sshd 没有在 2222 端口监听，启动失败。请检查 sshd_config。"
 
 echo 'Starting tmux session...'
-(cd "$GITHUB_WORKSPACE" && tmux new-session -d -s runner)
+tmux new-session -d -s runner
 
-# Use `sed -u` (unbuffered) otherwise logs don't show up in the UI
+# ---------------------------------------------------------------------------
+# 6. Cloudflare 隧道
+#    cloudflared 单独后台化，这样 $! 拿到的才是真正的 cloudflared PID。
+#    原来写成 `cloudflared | tee | sed &`，$! 是管道最后一段(sed)的 PID，
+#    kill 掉它 cloudflared 会变成孤儿进程。
+# ---------------------------------------------------------------------------
 echo 'Starting Cloudflare tunnel...'
-./cloudflared tunnel --no-autoupdate --url tcp://localhost:2222 2>&1 | tee cloudflared.log | sed -u 's/^/cloudflared: /' &
+./cloudflared tunnel --no-autoupdate --url tcp://localhost:2222 > cloudflared.log 2>&1 &
 cloudflared_pid=$!
+pids+=("$cloudflared_pid")
+tail -F -n +1 cloudflared.log | sed -u 's/^/cloudflared: /' &
+pids+=($!)
 
-#
-# Tail `cloudflared.log` to find the part where they share the relay
-# hostname.
-#
-# Shell substitution `<()` required to prevent the pipeline from hanging
-# even after it finds a first match. See <https://stackoverflow.com/a/45327054>.
-#
-# Requires GNU Bash.
-#
-url=$(head -1 <(tail -f cloudflared.log | grep --line-buffered -o 'https://.*\.trycloudflare.com'))
+# 有限次轮询取地址。
+# 原来的 `tail -f | grep` 在隧道起不来时会一直挂到 job 超时。
+url=""
+for _ in $(seq 1 60); do
+    url=$(grep -oE 'https://[a-zA-Z0-9-]+\.trycloudflare\.com' cloudflared.log | head -1 || true)
+    [ -n "$url" ] && break
+    kill -0 "$cloudflared_pid" 2>/dev/null \
+        || fail "cloudflared 提前退出，日志如下：
+$(tail -20 cloudflared.log)"
+    sleep 1
+done
+[ -n "$url" ] || fail "60 秒内未获取到隧道地址，日志如下：
+$(tail -20 cloudflared.log)"
 
-# POSIX-compatible but just hangs
-# url=$(tail -f cloudflared.log | grep --line-buffered -o 'https://.*\.trycloudflare.com' | head -1)
+# 忽略公钥末尾的 user@host 注释
+public_key=$(cut -d' ' -f1,2 < ssh_host_ed25519_key.pub)
+host="action-sshd-cloudflared"
+proxy="cloudflared access tcp --hostname ${url}"
 
-# POSIX-compatible using simple polling instead
-# url=$(while ! grep -o 'https://.*\.trycloudflare.com' cloudflared.log; do sleep 1; done)
+# 空行输出空格，否则会被 GitHub 日志吞掉
+printf '    \n    \n    \n    \n'
+echo 'Run the following command to connect SSH:'
+echo '    '
+echo "    ssh-keygen -R ${host} && echo '${host} ${public_key}' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='${proxy}' runner@${host}"
+echo '    '
+echo 'Run the following command to connect if you want to log in via RDP:'
+echo '    '
+echo "    ssh-keygen -R ${host} && echo '${host} ${public_key}' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='${proxy}' -L 21118:localhost:3389 runner@${host}"
+echo '    '
+echo 'To end the session, run inside tmux:  tmux wait-for -S channel'
 
-# Ignore the `user@host` part at the end of the public key
-public_key=$(cut -d' ' -f1,2 < ssh_host_rsa_key.pub)
-
-# Notify the actor and output to the run log
-
-(
-    # Echo spaces on empty lines because if we just echo a newline, GitHub will eat it
-    echo '    '
-    echo '    '
-    echo '    '
-    echo '    '
-    echo 'Run the following command to connect SSH:'
-    echo '    '
-    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' runner@action-sshd-cloudflared"
-    echo '    '
-    echo 'Run the following command to connect if you want to log in via RDP:'
-    echo '    '
-    echo "    ssh-keygen -R action-sshd-cloudflared && echo 'action-sshd-cloudflared $public_key' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='cloudflared access tcp --hostname $url' -L 21118:localhost:3389 runner@action-sshd-cloudflared"
-
-    #
-    # Unlike Upterm that runs a custom SSH server to accept passwords in the
-    # username field with the `:password` syntax, standard `sshd` doesn't
-    # accept that, so we need to paste the password like mere mortals.
-    #
-    if [ -n "$password" ]; then
-        echo '    '
-        echo "    # Password: $password"
-    fi
-) | notify_func
-
+# 保持 job 存活，直到用户在 tmux 里执行 `tmux wait-for -S channel`
 tmux wait-for channel
 
 echo 'Session ended'
-
-kill "$cloudflared_pid"
-kill "$sshd_pid"
-
-if [ -s /tmp/ix-io.txt ]; then
-    curl -u "$IX_USERNAME:$IX_PASSWORD" -X DELETE "$(cat /tmp/ix-io.txt)"
-fi
