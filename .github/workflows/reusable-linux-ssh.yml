@@ -82,7 +82,7 @@ jobs:
 
       - name: Prepare upload dir
         run: |
-          sudo mkdir -p /mnt/runner-will-upload
+          sudo mkdir -p /mnt/runner-will-upload && sudo chmod 777 -R /mnt
           sudo rm -f /mnt/DATALOSS_WARNING_README.txt
 
       - name: Start SSH environment
