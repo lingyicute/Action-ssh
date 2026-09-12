@@ -11,8 +11,25 @@ AllowUsers $USER
 # Only allow those keys
 AuthorizedKeysFile $PWD/authorized_keys
 
-# Force to start tmux on login
-ForceCommand tmux attach
+# 本环境只接受公钥登录：runner 账号本来就没有密码，
+# 但 sshd 默认口令认证是开着的，显式关掉减少攻击面。
+PasswordAuthentication no
+KbdInteractiveAuthentication no
+PermitEmptyPasswords no
+
+# sftp / scp / rsync / git over ssh 都依赖子系统。
+# 不写这一行时 sshd 的默认值是「没有子系统」，
+# 而 scp 自 OpenSSH 9.0 起默认走 SFTP 协议，传文件会直接 Connection closed。
+Subsystem sftp internal-sftp
+
+# ForceCommand 由 force-command.sh 分发：
+#   交互式登录 -> tmux new-session -A -s runner（会话在就复用，不在就新建）
+#   sftp/scp   -> sftp-server
+#   ssh host <cmd> -> 原样执行
+# 原来的 `ForceCommand tmux attach` 有两个坑：
+#   1) 会话被销毁（用户 exit）后再登录只会得到 "no sessions"；
+#   2) sftp / scp / rsync / 远程命令全部被吞掉。
+ForceCommand bash $PWD/force-command.sh
 
 ClientAliveInterval 30
 ClientAliveCountMax 3

@@ -39,11 +39,15 @@
 
 4.  **结束会话**
     - 登录进去后你会直接落在一个 tmux 会话里，Workflow 会一直保持运行状态。
-    - 想正常收尾（而不是去 Actions 页面手动 Cancel），在这个 tmux 会话里执行：
-      ```bash
-      tmux wait-for -S channel
-      ```
-    - 也可以随时 `Ctrl-b d` 脱离会话让它在后台继续跑，之后用 `tmux attach` 回来。
+    - 想正常收尾（而不是去 Actions 页面手动 Cancel），二选一：
+      - 在这个 tmux 会话里执行 `tmux wait-for -S channel`；
+      - 或者直接 `exit` 退出 tmux 会话（关掉最后一个窗口），job 会自动结束。
+    - 也可以随时 `Ctrl-b d` 脱离会话让它在后台继续跑，之后重新执行上面的 `ssh`
+      命令回来即可。
+    - 连上之后 `sftp` / `scp` / `rsync` / `ssh host '命令'` 都是可用的
+      （走同一条 `ProxyCommand` 隧道，用法与普通 SSH 一致），
+      例如把 `ssh ... runner@action-sshd-cloudflared` 换成
+      `scp -o ProxyCommand='cloudflared access tcp --hostname <地址>' 本地文件 runner@action-sshd-cloudflared:`。
 
 ### 连接到 RDP 环境 (Windows)
 
@@ -117,4 +121,16 @@
 
 **连上之后想结束**
 
-在 tmux 会话里执行 `tmux wait-for -S channel`（见上文「结束会话」）。
+在 tmux 会话里执行 `tmux wait-for -S channel`，或直接 `exit` 退出会话（见上文「结束会话」）。
+
+**连上了但 `scp` / `sftp` 报 `Connection closed`**
+
+这是 `sshd_config.template` 里缺 `Subsystem sftp` 导致的：sshd 的默认值就是「没有子系统」，
+而 `scp` 从 OpenSSH 9.0 起默认走 SFTP 协议，所以传文件会直接失败。
+模板里现在写了 `Subsystem sftp internal-sftp`，如仍失败请确认你的 fork 已同步。
+
+**反复输错认证后突然「连接被重置」**
+
+OpenSSH 9.8+ 会按来源 IP 施加惩罚（`PerSourcePenalties`），
+短时间内连续认证失败会临时丢弃该来源的连接。等几十秒再试即可，
+或者去 Actions 页面取消任务重启一次。

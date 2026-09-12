@@ -1,0 +1,17 @@
+# 让 Dependabot 定期把 actions/* 和 actionlint 版本往上抬，
+# 现在所有 uses 都写死了浮动 tag（checkout@v7），
+# 不主动跟就会一直停在旧的大版本上。
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    groups:
+      # 一个 PR 搞定一批，避免刷屏
+      actions:
+        patterns:
+          - "*"

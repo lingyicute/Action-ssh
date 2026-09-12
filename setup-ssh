@@ -19,11 +19,12 @@ cd "${GITHUB_WORKSPACE:?GITHUB_WORKSPACE 未设置}"
 #    这里再兜一层，给出明确报错而不是让人对着一堆 command not found 猜。
 # ---------------------------------------------------------------------------
 missing=()
-for dep in curl jq ssh-keygen tmux; do
+for dep in curl jq ssh-keygen tmux bash; do
     command -v "$dep" >/dev/null 2>&1 || missing+=("$dep")
 done
 # sshd 位于 /usr/sbin，不在非 root 用户的 PATH 里，必须用绝对路径检查
 [ -x /usr/sbin/sshd ] || missing+=("openssh-server")
+[ -f force-command.sh ] || missing+=("force-command.sh(仓库文件，检查是否被删除)")
 if [ "${#missing[@]}" -gt 0 ]; then
     fail "缺少依赖: ${missing[*]}
   请在 workflow 中先执行：
@@ -71,7 +72,7 @@ chmod +x cloudflared
 #    否则脚本会照常启动 sshd 并打印连接命令，
 #    然后 job 干等满 6 小时而谁都连不上。
 # ---------------------------------------------------------------------------
-api_url="https://api.github.com/users/${GITHUB_ACTOR}/keys"
+api_url="https://api.github.com/users/${GITHUB_ACTOR}/keys?per_page=100"
 api_body=$(curl -fsS --retry 3 -H 'Accept: application/vnd.github+json' "$api_url") \
     || fail "无法获取 ${api_url}（限流或网络问题）"
 
@@ -155,19 +156,50 @@ public_key=$(cut -d' ' -f1,2 < ssh_host_ed25519_key.pub)
 host="action-sshd-cloudflared"
 proxy="cloudflared access tcp --hostname ${url}"
 
+known_hosts_line="ssh-keygen -R ${host} && echo '${host} ${public_key}' >> ~/.ssh/known_hosts"
+ssh_cmd="${known_hosts_line} && ssh -o ProxyCommand='${proxy}' runner@${host}"
+rdp_cmd="${known_hosts_line} && ssh -o ProxyCommand='${proxy}' -L 21118:localhost:3389 runner@${host}"
+
 # 空行输出空格，否则会被 GitHub 日志吞掉
 printf '    \n    \n    \n    \n'
 echo 'Run the following command to connect SSH:'
 echo '    '
-echo "    ssh-keygen -R ${host} && echo '${host} ${public_key}' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='${proxy}' runner@${host}"
+echo "    ${ssh_cmd}"
 echo '    '
 echo 'Run the following command to connect if you want to log in via RDP:'
 echo '    '
-echo "    ssh-keygen -R ${host} && echo '${host} ${public_key}' >> ~/.ssh/known_hosts && ssh -o ProxyCommand='${proxy}' -L 21118:localhost:3389 runner@${host}"
+echo "    ${rdp_cmd}"
 echo '    '
-echo 'To end the session, run inside tmux:  tmux wait-for -S channel'
+echo 'End the session from inside tmux with:  tmux wait-for -S channel'
+echo '（或者直接退出 tmux 会话 / 关掉所有窗口，job 会自动结束）'
 
-# 保持 job 存活，直到用户在 tmux 里执行 `tmux wait-for -S channel`
-tmux wait-for channel
+# 同一个地址写进 Job Summary：不用再回日志里翻，
+# 而且 workflow 结束后 summary 依然可读。
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ] && [ -w "${GITHUB_STEP_SUMMARY}" ]; then
+    {
+        echo '## SSH 环境已就绪'
+        echo
+        echo '```bash'
+        echo "${ssh_cmd}"
+        echo '```'
+        echo
+        echo '## RDP（需要图形界面时）'
+        echo
+        echo '```bash'
+        echo "${rdp_cmd}"
+        echo '```'
+        echo
+        echo '结束会话：在 tmux 里执行 tmux wait-for -S channel，或直接退出 tmux 会话。'
+    } >> "${GITHUB_STEP_SUMMARY}"
+fi
+# 顺手在 Actions 界面顶部给一条 notice，省得进日志找
+echo "::notice title=SSH 已就绪（点击查看连接命令）::${ssh_cmd}"
+
+# 保持 job 存活，直到满足任一结束条件：
+#   1. 用户在 tmux 里执行 `tmux wait-for -S channel`（老用法，保留）
+#   2. tmux 会话本身消失（用户 exit / 关掉最后一个窗口）
+while tmux has-session -t runner 2>/dev/null; do
+    tmux wait-for -t 10 channel 2>/dev/null && break
+done
 
 echo 'Session ended'
