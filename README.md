@@ -39,11 +39,8 @@
 
 4.  **结束会话**
     - 登录进去后你会直接落在一个 tmux 会话里，Workflow 会一直保持运行状态。
-    - 想正常收尾（而不是去 Actions 页面手动 Cancel），二选一：
-      - 在这个 tmux 会话里执行 `tmux wait-for -S channel`；
-      - 或者直接 `exit` 退出 tmux 会话（关掉最后一个窗口），job 会自动结束。
-    - 也可以随时 `Ctrl-b d` 脱离会话让它在后台继续跑，之后重新执行上面的 `ssh`
-      命令回来即可。
+    - 想正常收尾（而不是去 Actions 页面手动 Cancel），直接 `exit` 退出 tmux 会话（关掉最后一个窗口），job 会自动结束。
+    - 也可以随时 `Ctrl-b d` 脱离会话让它在后台继续跑，之后重新执行上面的 `ssh` 命令回来即可。
     - 连上之后 `sftp` / `scp` / `rsync` / `ssh host '命令'` 都是可用的
       （走同一条 `ProxyCommand` 隧道，用法与普通 SSH 一致），
       例如把 `ssh ... runner@action-sshd-cloudflared` 换成
