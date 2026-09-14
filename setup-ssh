@@ -73,7 +73,14 @@ chmod +x cloudflared
 #    然后 job 干等满 6 小时而谁都连不上。
 # ---------------------------------------------------------------------------
 api_url="https://api.github.com/users/${GITHUB_ACTOR}/keys?per_page=100"
-api_body=$(curl -fsS --retry 3 -H 'Accept: application/vnd.github+json' "$api_url") \
+# 带上 GITHUB_TOKEN：匿名请求的限流是按「来源 IP」算的（60 次/小时），
+# 而托管 runner 的出口 IP 是共享的，经常还没开始就被限流；
+# 用 token 之后限额按仓库计（5000 次/小时），基本不会再误伤。
+api_args=(-H 'Accept: application/vnd.github+json')
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    api_args+=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
+api_body=$(curl -fsS --retry 3 "${api_args[@]}" "$api_url") \
     || fail "无法获取 ${api_url}（限流或网络问题）"
 
 printf '%s' "$api_body" | jq -e 'type == "array"' >/dev/null \
@@ -198,8 +205,14 @@ echo "::notice title=SSH 已就绪（点击查看连接命令）::${ssh_cmd}"
 # 保持 job 存活，直到满足任一结束条件：
 #   1. 用户在 tmux 里执行 `tmux wait-for -S channel`（老用法，保留）
 #   2. tmux 会话本身消失（用户 exit / 关掉最后一个窗口）
+# 注意：tmux wait-for 本身没有超时参数（-t 是无效选项，写了会直接报
+# "unknown flag -t"），所以用 timeout(1) 给它加 10 秒上限：
+#   - 收到 channel 信号：wait-for 返回 0 -> break
+#   - 10 秒超时：回头再查一次会话是否还在
 while tmux has-session -t runner 2>/dev/null; do
-    tmux wait-for -t 10 channel 2>/dev/null && break
+    if timeout 10 tmux wait-for channel 2>/dev/null; then
+        break
+    fi
 done
 
 echo 'Session ended'

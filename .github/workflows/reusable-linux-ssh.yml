@@ -65,6 +65,28 @@ jobs:
             echo 'allow-user-xsession' | sudo tee -a /etc/X11/Xsession.options >/dev/null
           fi
 
+      - name: Start xrdp
+        if: inputs.desktop == 'kde'
+        run: |
+          # 托管 runner 上 apt install 不保证自动启动服务（服务不由 systemd 托管），
+          # 必须显式启动；否则 3389 端口没有进程监听，
+          # setup-ssh 打印的 RDP 命令（-L 21118:localhost:3389）必然连接被拒。
+          sudo service xrdp start
+          # 与 setup-ssh 探测 sshd 2222 的逻辑一致：确认 3389 真的在监听，
+          # 起不来就立刻失败并输出日志，而不是让用户对着打不开的 RDP 猜。
+          listening=no
+          for _ in $(seq 1 20); do
+            if (exec 3<>/dev/tcp/127.0.0.1/3389) 2>/dev/null; then listening=yes; break; fi
+            sleep 0.5
+          done
+          if [ "$listening" != yes ]; then
+            echo "::error::xrdp 启动后未能在 3389 端口监听"
+            sudo tail -30 /var/log/xrdp.log 2>/dev/null || true
+            sudo journalctl -u xrdp -n 30 --no-pager 2>/dev/null || true
+            exit 1
+          fi
+          echo "xrdp is listening on 3389"
+
       - name: Enable KVM
         if: inputs.enable-kvm
         run: |
